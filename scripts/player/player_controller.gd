@@ -18,7 +18,7 @@ func _physics_process(delta: float) -> void:
 	var cam_yaw: float = camera.get_yaw() if camera.has_method("get_yaw") else 0.0
 	var forward := Vector3(sin(cam_yaw), 0, cos(cam_yaw))
 	var right := Vector3(cos(cam_yaw), 0, -sin(cam_yaw))
-	var move_dir := (forward * -input_dir.y + right * input_dir.x)
+	var move_dir := (forward * input_dir.y + right * input_dir.x)
 
 	velocity.x = move_dir.x * move_speed
 	velocity.z = move_dir.z * move_speed
