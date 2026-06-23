@@ -3,6 +3,7 @@ extends CharacterBody3D
 @export var move_speed: float = 5.0
 @export var rotation_speed: float = 10.0
 @export var gravity: float = 20.0
+@export var jump_force: float = 8.0
 
 @onready var model: Node3D = $Model
 @onready var camera: Camera3D = $Camera3D
@@ -23,10 +24,13 @@ func _physics_process(delta: float) -> void:
 	velocity.x = move_dir.x * move_speed
 	velocity.z = move_dir.z * move_speed
 
-	if not is_on_floor():
-		velocity.y -= gravity * delta
+	if is_on_floor():
+		if Input.is_action_just_pressed("jump"):
+			velocity.y = jump_force
+		else:
+			velocity.y = 0.0
 	else:
-		velocity.y = 0.0
+		velocity.y -= gravity * delta
 
 	move_and_slide()
 
