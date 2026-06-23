@@ -4,9 +4,32 @@ const G := "res://assets/models/Medieval Village MegaKit[Standard]/glTF/"
 const W := 2.0
 const H := 3.0
 
+const SAVE_PATH := "res://scenes/world/village.tscn"
+
 func _ready() -> void:
-	_build()
+	if not ResourceLoader.exists(SAVE_PATH):
+		_build()
+		_save_scene()
+		print("[Village] Scene saved to %s — restart and edit visually!" % SAVE_PATH)
+	else:
+		var scene: PackedScene = load(SAVE_PATH)
+		var village := scene.instantiate()
+		for child in village.get_children():
+			village.remove_child(child)
+			add_child(child)
+		village.queue_free()
 	_add_all_collisions(self)
+
+func _save_scene() -> void:
+	var packed := PackedScene.new()
+	_set_owner_all(self, self)
+	packed.pack(self)
+	ResourceSaver.save(packed, SAVE_PATH)
+
+func _set_owner_all(node: Node, root: Node) -> void:
+	for child in node.get_children():
+		child.owner = root
+		_set_owner_all(child, root)
 
 func _build() -> void:
 	_build_road()
