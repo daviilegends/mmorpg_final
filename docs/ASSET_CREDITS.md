@@ -17,7 +17,7 @@ All assets used in this project must be legally safe and properly documented her
 
 | Asset Name | Author | Source | License | Usage Notes |
 |-----------|--------|--------|---------|-------------|
-| (none yet) | — | — | — | — |
+| KayKit Adventurers Character Pack 2.0 | Kay Lousberg | kaylousberg.com | CC0 | Player characters (Rogue, Knight, Mage, Ranger, Barbarian), weapons, animations |
 
 ## Rules
 - Only CC0, public domain, or royalty-free commercial use
