@@ -8,6 +8,7 @@
 [ext_resource type="Script" uid="uid://wjtrvcntc7sv" path="res://scripts/farming/farm_plot_interactable.gd" id="6"]
 [ext_resource type="Script" uid="uid://62xwq33ijyj2" path="res://scripts/world/village_builder.gd" id="7"]
 [ext_resource type="PackedScene" uid="uid://8stp7i4s2bbm" path="res://assets/models/Assets/fbx/bow.fbx" id="8_x5v0o"]
+[ext_resource type="Script" path="res://scripts/world/forest_ring.gd" id="9"]
 
 [sub_resource type="ProceduralSkyMaterial" id="SkyMaterial_001"]
 sky_top_color = Color(0.35, 0.6, 0.92, 1)
@@ -125,6 +126,9 @@ shape = SubResource("BoxShape3D_farm")
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.2, 0)
 text = "Farm Plot"
 font_size = 24
+
+[node name="ForestRing" type="Node3D" parent="."]
+script = ExtResource("9")
 
 [node name="InteractionHUD" parent="." unique_id=1144441664 instance=ExtResource("2")]
 
