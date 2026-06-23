@@ -8,9 +8,9 @@
 - [x] Godot 4.7 project configured
 
 ### Next Tasks
-- [ ] Player character with WASD movement
-- [ ] Camera follow system
-- [ ] Small test map (grass, trees, house, farm area)
+- [x] Player character with WASD movement
+- [x] Camera follow system
+- [x] Small test map (grass, trees, house, farm area)
 - [ ] Interaction system (Press E)
 - [ ] Inventory system with item resources
 - [ ] Farming plot (plant, grow, harvest)
