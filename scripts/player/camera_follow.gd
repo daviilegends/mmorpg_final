@@ -17,11 +17,19 @@ var _rotating: bool = false
 var _drag_threshold: float = 4.0
 var _mouse_press_pos: Vector2 = Vector2.ZERO
 var _dragged: bool = false
+var _sensitivity_scale: float = 3.0
 
 func _ready() -> void:
+	add_to_group("player_camera")
 	if target:
 		_target_node = get_node(target)
 	top_level = true
+
+func set_sensitivity_scale(value: float) -> void:
+	_sensitivity_scale = value
+
+func get_sensitivity_scale() -> float:
+	return _sensitivity_scale
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton:
@@ -46,8 +54,9 @@ func _unhandled_input(event: InputEvent) -> void:
 				_dragged = true
 				Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 		if _dragged:
-			_yaw -= mm.relative.x * mouse_sensitivity
-			_pitch -= mm.relative.y * mouse_sensitivity
+			var sens := mouse_sensitivity * _sensitivity_scale
+			_yaw -= mm.relative.x * sens
+			_pitch -= mm.relative.y * sens
 			_pitch = clampf(_pitch, deg_to_rad(pitch_min), deg_to_rad(pitch_max))
 
 func _physics_process(delta: float) -> void:

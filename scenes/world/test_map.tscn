@@ -10,6 +10,7 @@
 [ext_resource type="PackedScene" uid="uid://8stp7i4s2bbm" path="res://assets/models/Assets/fbx/bow.fbx" id="8_x5v0o"]
 [ext_resource type="Script" path="res://scripts/world/forest_ring.gd" id="9"]
 [ext_resource type="Script" path="res://scripts/world/background_music.gd" id="10"]
+[ext_resource type="Script" path="res://scripts/ui/pause_menu.gd" id="11"]
 
 [sub_resource type="ProceduralSkyMaterial" id="SkyMaterial_001"]
 sky_top_color = Color(0.35, 0.6, 0.92, 1)
@@ -133,6 +134,10 @@ script = ExtResource("9")
 
 [node name="BackgroundMusic" type="AudioStreamPlayer" parent="."]
 script = ExtResource("10")
+
+[node name="PauseMenu" type="CanvasLayer" parent="."]
+process_mode = 3
+script = ExtResource("11")
 
 [node name="InteractionHUD" parent="." unique_id=1144441664 instance=ExtResource("2")]
 
