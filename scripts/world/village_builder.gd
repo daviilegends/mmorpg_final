@@ -52,12 +52,24 @@ func _p(model: String, pos: Vector3, rot_y: float = 0.0, par: Node3D = null) -> 
 	inst.name = model
 	return inst
 
+const NO_COLLISION_PREFIXES: Array[String] = [
+	"Prop_Brick", "Prop_Vine", "Grass", "Flower",
+]
+
 func _add_all_collisions(node: Node3D) -> void:
+	if _should_skip_collision(node.name):
+		return
 	for child in node.get_children():
 		if child is MeshInstance3D:
 			child.create_trimesh_collision()
 		if child is Node3D and child.get_child_count() > 0:
 			_add_all_collisions(child)
+
+func _should_skip_collision(node_name: String) -> bool:
+	for prefix in NO_COLLISION_PREFIXES:
+		if node_name.begins_with(prefix):
+			return true
+	return false
 
 func _walls(origin: Vector3, nx: int, nz: int, y: float,
 		wall_front: String, wall_back: String, wall_left: String, wall_right: String,

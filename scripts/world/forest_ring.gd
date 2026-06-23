@@ -29,13 +29,14 @@ func _ready() -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 42
 
-	_spawn_ring(rng, TREES, tree_count, inner_radius, outer_radius, 0.6, 1.4)
-	_spawn_ring(rng, BUSHES, bush_count, inner_radius - 3.0, outer_radius, 0.7, 1.3)
-	_spawn_ring(rng, FLOWERS, flower_count, inner_radius - 5.0, outer_radius - 5.0, 0.8, 1.5)
-	_spawn_ring(rng, GRASS, grass_count, inner_radius - 6.0, outer_radius - 3.0, 0.6, 1.2)
+	_spawn_ring(rng, TREES, tree_count, inner_radius, outer_radius, 0.6, 1.4, true)
+	_spawn_ring(rng, BUSHES, bush_count, inner_radius - 3.0, outer_radius, 0.7, 1.3, true)
+	_spawn_ring(rng, FLOWERS, flower_count, inner_radius - 5.0, outer_radius - 5.0, 0.8, 1.5, false)
+	_spawn_ring(rng, GRASS, grass_count, inner_radius - 6.0, outer_radius - 3.0, 0.6, 1.2, false)
 
 func _spawn_ring(rng: RandomNumberGenerator, models: Array[String], count: int,
-		r_min: float, r_max: float, scale_min: float, scale_max: float) -> void:
+		r_min: float, r_max: float, scale_min: float, scale_max: float,
+		with_collision: bool) -> void:
 	for i in range(count):
 		var angle := rng.randf() * TAU
 		var dist := rng.randf_range(r_min, r_max)
@@ -53,7 +54,8 @@ func _spawn_ring(rng: RandomNumberGenerator, models: Array[String], count: int,
 		var s := rng.randf_range(scale_min, scale_max)
 		inst.scale = Vector3(s, s, s)
 
-		_add_collision(inst)
+		if with_collision:
+			_add_collision(inst)
 
 func _add_collision(node: Node3D) -> void:
 	for child in node.get_children():
