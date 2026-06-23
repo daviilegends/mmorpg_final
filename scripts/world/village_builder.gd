@@ -1,4 +1,3 @@
-@tool
 extends Node3D
 
 const G := "res://assets/models/Medieval Village MegaKit[Standard]/glTF/"
@@ -6,10 +5,8 @@ const W := 2.0
 const H := 3.0
 
 func _ready() -> void:
-	if get_child_count() == 0:
-		_build()
-	if not Engine.is_editor_hint():
-		_add_all_collisions(self)
+	_build()
+	_add_all_collisions(self)
 
 func _build() -> void:
 	_build_road()
@@ -26,21 +23,11 @@ func _p(model: String, pos: Vector3, rot_y: float = 0.0, par: Node3D = null) -> 
 		push_warning("[Village] Missing: %s" % model)
 		return null
 	var inst := scene.instantiate()
-	var target := par if par else self
-	target.add_child(inst)
+	(par if par else self).add_child(inst)
 	inst.position = pos
 	inst.rotation.y = deg_to_rad(rot_y)
 	inst.name = model
-	if Engine.is_editor_hint():
-		var scene_root := get_tree().edited_scene_root
-		inst.owner = scene_root
-		_set_owner_recursive(inst, scene_root)
 	return inst
-
-func _set_owner_recursive(node: Node, owner_node: Node) -> void:
-	for child in node.get_children():
-		child.owner = owner_node
-		_set_owner_recursive(child, owner_node)
 
 func _add_all_collisions(node: Node3D) -> void:
 	for child in node.get_children():
@@ -69,8 +56,6 @@ func _build_road() -> void:
 	var road := Node3D.new()
 	road.name = "Road"
 	add_child(road)
-	if Engine.is_editor_hint():
-		road.owner = get_tree().edited_scene_root
 	for z in range(-8, 9):
 		for x in range(-1, 2):
 			_p("Floor_UnevenBrick", Vector3(x * W, 0.01, z * W), 0, road)
@@ -79,8 +64,6 @@ func _build_left_building(origin: Vector3) -> void:
 	var b := Node3D.new()
 	b.name = "Building_Left"
 	add_child(b)
-	if Engine.is_editor_hint():
-		b.owner = get_tree().edited_scene_root
 
 	var nx := 3
 	var nz := 3
@@ -111,8 +94,6 @@ func _build_right_building(origin: Vector3) -> void:
 	var b := Node3D.new()
 	b.name = "Building_Right"
 	add_child(b)
-	if Engine.is_editor_hint():
-		b.owner = get_tree().edited_scene_root
 
 	var nx := 3
 	var nz := 4
@@ -141,8 +122,6 @@ func _build_small_house(origin: Vector3) -> void:
 	var b := Node3D.new()
 	b.name = "Small_House"
 	add_child(b)
-	if Engine.is_editor_hint():
-		b.owner = get_tree().edited_scene_root
 
 	_walls(origin, 2, 2, 0,
 		"Wall_Plaster_Straight", "Wall_Plaster_Straight",
@@ -157,8 +136,6 @@ func _build_tower(origin: Vector3) -> void:
 	var b := Node3D.new()
 	b.name = "Tower"
 	add_child(b)
-	if Engine.is_editor_hint():
-		b.owner = get_tree().edited_scene_root
 
 	for fl in range(3):
 		var y := fl * H
@@ -174,8 +151,6 @@ func _build_fences() -> void:
 	var f := Node3D.new()
 	f.name = "Fences"
 	add_child(f)
-	if Engine.is_editor_hint():
-		f.owner = get_tree().edited_scene_root
 	for i in range(6):
 		_p("Prop_WoodenFence_Single", Vector3(3, 0, -6 + i * W), 90, f)
 	for i in range(3):
@@ -185,8 +160,6 @@ func _build_decorations() -> void:
 	var d := Node3D.new()
 	d.name = "Decorations"
 	add_child(d)
-	if Engine.is_editor_hint():
-		d.owner = get_tree().edited_scene_root
 	_p("Prop_Crate", Vector3(-7, 0, -5), 0, d)
 	_p("Prop_Crate", Vector3(-7.5, 0, -5.4), 0, d)
 	_p("Prop_Crate", Vector3(-7.2, 0.6, -5.2), 0, d)
