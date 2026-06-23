@@ -12,13 +12,12 @@ extends CharacterBody3D
 var _anim_player: AnimationPlayer = null
 var _current_anim: String = ""
 var _is_jumping: bool = false
-
-func _ready() -> void:
-	await get_tree().create_timer(0.1).timeout
-	if model and model.has_method("_find_animation_player"):
-		_anim_player = model.anim_player
+var _landing_timer: float = 0.0
 
 func _physics_process(delta: float) -> void:
+	if _landing_timer > 0.0:
+		_landing_timer -= delta
+
 	var input_dir := Vector2.ZERO
 	input_dir.x = Input.get_axis("move_left", "move_right")
 	input_dir.y = Input.get_axis("move_forward", "move_backward")
@@ -45,7 +44,7 @@ func _physics_process(delta: float) -> void:
 			if _is_jumping:
 				_is_jumping = false
 				_play_anim("Jump_Land")
-				await get_tree().create_timer(0.15).timeout
+				_landing_timer = 0.2
 			velocity.y = 0.0
 	else:
 		velocity.y -= gravity * delta
@@ -56,7 +55,8 @@ func _physics_process(delta: float) -> void:
 		var target_angle := atan2(move_dir.x, move_dir.z)
 		model.rotation.y = lerp_angle(model.rotation.y, target_angle, rotation_speed * delta)
 
-	_update_animation(move_dir.length(), running)
+	if _landing_timer <= 0.0:
+		_update_animation(move_dir.length(), running)
 
 func _update_animation(move_amount: float, running: bool) -> void:
 	if not _anim_player:
