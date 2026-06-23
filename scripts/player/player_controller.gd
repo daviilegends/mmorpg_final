@@ -10,6 +10,7 @@ extends CharacterBody3D
 @onready var camera: Camera3D = $Camera3D
 
 var _anim_player: AnimationPlayer = null
+var _sprite_player: Node = null
 var _current_anim: String = ""
 var _is_jumping: bool = false
 var _landing_timer: float = 0.0
@@ -59,32 +60,42 @@ func _physics_process(delta: float) -> void:
 		_update_animation(move_dir.length(), running)
 
 func _update_animation(move_amount: float, running: bool) -> void:
-	if not _anim_player:
-		if model and model.get("anim_player"):
-			_anim_player = model.anim_player
-		if not _anim_player:
-			return
+	_find_anim_source()
 
 	if _is_jumping:
 		if velocity.y > 0:
-			_play_anim("Jump_Start")
+			_play_anim("Jump_Start", "jump")
 		else:
-			_play_anim("Jump_Idle")
+			_play_anim("Jump_Idle", "jump")
 		return
 
 	if move_amount > 0.1:
 		if running:
-			_play_anim("Running_A")
+			_play_anim("Running_A", "run")
 		else:
-			_play_anim("Walking_A")
+			_play_anim("Walking_A", "walk")
 	else:
-		_play_anim("Idle_A")
+		_play_anim("Idle_A", "idle")
 
-func _play_anim(anim_name: String) -> void:
-	if not _anim_player:
+func _find_anim_source() -> void:
+	if _anim_player or _sprite_player:
 		return
-	if _current_anim == anim_name:
-		return
-	if _anim_player.has_animation(anim_name):
-		_anim_player.play(anim_name, 0.2)
-		_current_anim = anim_name
+	if model and model.get("anim_player"):
+		_anim_player = model.anim_player
+	if not _anim_player and model:
+		var sprite := model.find_child("Sprite", false)
+		if sprite and sprite.has_method("play_anim"):
+			_sprite_player = sprite
+
+func _play_anim(anim_3d: String, anim_sprite: String) -> void:
+	if _anim_player:
+		if _current_anim == anim_3d:
+			return
+		if _anim_player.has_animation(anim_3d):
+			_anim_player.play(anim_3d, 0.2)
+			_current_anim = anim_3d
+	elif _sprite_player:
+		if _current_anim == anim_sprite:
+			return
+		_sprite_player.play_anim(anim_sprite)
+		_current_anim = anim_sprite
