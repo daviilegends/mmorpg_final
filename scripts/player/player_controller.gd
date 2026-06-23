@@ -44,7 +44,7 @@ func _physics_process(delta: float) -> void:
 		else:
 			if _is_jumping:
 				_is_jumping = false
-				_play_anim("Jump_Land")
+				_play_anim("Jump_Land", "idle")
 				_landing_timer = 0.2
 			velocity.y = 0.0
 	else:
