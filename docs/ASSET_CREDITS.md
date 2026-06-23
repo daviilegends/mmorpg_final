@@ -19,6 +19,8 @@ All assets used in this project must be legally safe and properly documented her
 |-----------|--------|--------|---------|-------------|
 | KayKit Adventurers Character Pack 2.0 | Kay Lousberg | kaylousberg.com | CC0 | Player characters (Rogue, Knight, Mage, Ranger, Barbarian), weapons, animations |
 | Medieval Village MegaKit (Standard) | Quaternius | quaternius.com | CC0 | Village buildings, walls, roofs, floors, props, fences, stairs |
+| Ultimate Stylized Nature (May 2022) | Quaternius | quaternius.com | CC0 | Trees (birch, maple), bushes, flowers, grass |
+| RPG Medieval Animated Music | Andorios | pixabay.com | Royalty-free | Background music loop |
 
 ## Rules
 - Only CC0, public domain, or royalty-free commercial use
