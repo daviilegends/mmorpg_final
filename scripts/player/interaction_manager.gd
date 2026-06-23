@@ -39,9 +39,9 @@ func _try_interact_at(screen_pos: Vector2) -> void:
 	if result.is_empty():
 		return
 
-	var collider := result.get("collider")
+	var collider: Object = result.get("collider")
 	if collider is Interactable and collider in _nearby:
-		collider.interact()
+		(collider as Interactable).interact()
 
 func _on_area_entered(area_node: Area3D) -> void:
 	if area_node is Interactable:
