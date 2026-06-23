@@ -5,20 +5,11 @@ const G := "res://assets/models/Medieval Village MegaKit[Standard]/glTF/"
 const W := 2.0
 const H := 3.0
 
-@export var build_village: bool = false:
-	set(value):
-		if value and Engine.is_editor_hint():
-			_clear()
-			_build()
-		build_village = false
-
 func _ready() -> void:
+	if get_child_count() == 0:
+		_build()
 	if not Engine.is_editor_hint():
 		_add_all_collisions(self)
-
-func _clear() -> void:
-	for child in get_children():
-		child.queue_free()
 
 func _build() -> void:
 	_build_road()
