@@ -1,10 +1,12 @@
 extends CanvasLayer
 
-const PANEL_BG := "res://assets/models/Assets/kenney_fantasy-ui-borders/PNG/Default/Panel/panel-000.png"
 const PANEL_BORDER := "res://assets/models/Assets/kenney_fantasy-ui-borders/PNG/Default/Border/panel-border-015.png"
+const TEXT_COLOR := Color(0.9, 0.88, 0.8)
+const BG_COLOR := Color(0.12, 0.1, 0.15, 0.95)
+const ACCENT_COLOR := Color(0.7, 0.6, 0.4)
 
 var _is_open := false
-var _panel: NinePatchRect
+var _root: Control
 var _music_slider: HSlider
 var _sensitivity_slider: HSlider
 var _music_label: Label
@@ -13,7 +15,7 @@ var _sensitivity_label: Label
 func _ready() -> void:
 	layer = 10
 	_build_ui()
-	_panel.visible = false
+	_root.visible = false
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("pause"):
@@ -21,41 +23,34 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func _toggle() -> void:
 	_is_open = not _is_open
-	_panel.visible = _is_open
+	_root.visible = _is_open
 	get_tree().paused = _is_open
 	if _is_open:
 		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 
 func _build_ui() -> void:
-	var bg := ColorRect.new()
-	bg.color = Color(0, 0, 0, 0.5)
-	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
-	bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(bg)
-	bg.visible = false
+	_root = Control.new()
+	_root.set_anchors_preset(Control.PRESET_FULL_RECT)
+	add_child(_root)
 
-	_panel = NinePatchRect.new()
-	_panel.texture = load(PANEL_BG)
-	_panel.patch_margin_left = 16
-	_panel.patch_margin_right = 16
-	_panel.patch_margin_top = 16
-	_panel.patch_margin_bottom = 16
-	_panel.set_anchors_preset(Control.PRESET_CENTER)
-	_panel.offset_left = -220
-	_panel.offset_right = 220
-	_panel.offset_top = -200
-	_panel.offset_bottom = 200
-	_panel.mouse_filter = Control.MOUSE_FILTER_STOP
-	add_child(_panel)
+	# Dark overlay
+	var overlay := ColorRect.new()
+	overlay.color = Color(0, 0, 0, 0.6)
+	overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+	overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	_root.add_child(overlay)
 
-	# Use bg visibility tied to panel
-	bg.visible = true
-	bg.show_behind_parent = true
+	# Panel background
+	var panel_bg := ColorRect.new()
+	panel_bg.color = BG_COLOR
+	panel_bg.set_anchors_preset(Control.PRESET_CENTER)
+	panel_bg.offset_left = -230
+	panel_bg.offset_right = 230
+	panel_bg.offset_top = -210
+	panel_bg.offset_bottom = 210
+	_root.add_child(panel_bg)
 
-	# Reparent bg under panel tracking
-	bg.visible = false
-	_panel.visibility_changed.connect(func() -> void: bg.visible = _panel.visible)
-
+	# Decorative border
 	var border := NinePatchRect.new()
 	border.texture = load(PANEL_BORDER)
 	border.patch_margin_left = 16
@@ -64,84 +59,83 @@ func _build_ui() -> void:
 	border.patch_margin_bottom = 16
 	border.set_anchors_preset(Control.PRESET_FULL_RECT)
 	border.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_panel.add_child(border)
+	border.modulate = ACCENT_COLOR
+	panel_bg.add_child(border)
 
+	# Content
 	var vbox := VBoxContainer.new()
 	vbox.set_anchors_preset(Control.PRESET_FULL_RECT)
-	vbox.offset_left = 30
-	vbox.offset_right = -30
-	vbox.offset_top = 25
-	vbox.offset_bottom = -25
-	vbox.add_theme_constant_override("separation", 12)
-	_panel.add_child(vbox)
+	vbox.offset_left = 35
+	vbox.offset_right = -35
+	vbox.offset_top = 30
+	vbox.offset_bottom = -30
+	vbox.add_theme_constant_override("separation", 10)
+	panel_bg.add_child(vbox)
 
 	# Title
-	var title := Label.new()
-	title.text = "Settings"
+	var title := _make_label("Settings", 30)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_font_size_override("font_size", 28)
+	title.add_theme_color_override("font_color", ACCENT_COLOR)
 	vbox.add_child(title)
 
-	# Divider
-	var div := HSeparator.new()
-	vbox.add_child(div)
+	vbox.add_child(_make_separator())
 
 	# Music Volume
-	var music_row := _create_label("Music Volume")
-	vbox.add_child(music_row)
+	vbox.add_child(_make_label("Music Volume", 20))
 
-	_music_slider = HSlider.new()
-	_music_slider.min_value = 0.0
-	_music_slider.max_value = 100.0
-	_music_slider.value = 70.0
-	_music_slider.custom_minimum_size.y = 30
+	_music_slider = _make_slider(0, 100, 70)
 	_music_slider.value_changed.connect(_on_music_changed)
 	vbox.add_child(_music_slider)
 
-	_music_label = Label.new()
-	_music_label.text = "70%"
+	_music_label = _make_label("70%", 16)
 	_music_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	vbox.add_child(_music_label)
 
-	# Spacer
-	vbox.add_child(HSeparator.new())
+	vbox.add_child(_make_separator())
 
 	# Mouse Sensitivity
-	var sens_row := _create_label("Mouse Sensitivity")
-	vbox.add_child(sens_row)
+	vbox.add_child(_make_label("Mouse Sensitivity", 20))
 
-	_sensitivity_slider = HSlider.new()
-	_sensitivity_slider.min_value = 1.0
-	_sensitivity_slider.max_value = 10.0
-	_sensitivity_slider.step = 0.1
-	_sensitivity_slider.value = 3.0
-	_sensitivity_slider.custom_minimum_size.y = 30
+	_sensitivity_slider = _make_slider(1, 10, 3, 0.1)
 	_sensitivity_slider.value_changed.connect(_on_sensitivity_changed)
 	vbox.add_child(_sensitivity_slider)
 
-	_sensitivity_label = Label.new()
-	_sensitivity_label.text = "3.0"
+	_sensitivity_label = _make_label("3.0", 16)
 	_sensitivity_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	vbox.add_child(_sensitivity_label)
 
-	# Spacer
-	vbox.add_child(HSeparator.new())
+	vbox.add_child(_make_separator())
 
 	# Resume button
 	var resume_btn := Button.new()
 	resume_btn.text = "Resume"
-	resume_btn.custom_minimum_size = Vector2(0, 40)
+	resume_btn.custom_minimum_size = Vector2(0, 45)
 	resume_btn.pressed.connect(_toggle)
+	resume_btn.add_theme_font_size_override("font_size", 20)
 	vbox.add_child(resume_btn)
 
-	# Load initial values
 	_load_initial_values()
 
-func _create_label(text: String) -> Label:
+func _make_label(text: String, size: int) -> Label:
 	var label := Label.new()
 	label.text = text
-	label.add_theme_font_size_override("font_size", 20)
+	label.add_theme_font_size_override("font_size", size)
+	label.add_theme_color_override("font_color", TEXT_COLOR)
 	return label
+
+func _make_slider(min_val: float, max_val: float, default: float, step: float = 1.0) -> HSlider:
+	var slider := HSlider.new()
+	slider.min_value = min_val
+	slider.max_value = max_val
+	slider.value = default
+	slider.step = step
+	slider.custom_minimum_size.y = 30
+	return slider
+
+func _make_separator() -> HSeparator:
+	var sep := HSeparator.new()
+	sep.add_theme_color_override("separator", Color(1, 1, 1, 0.15))
+	return sep
 
 func _load_initial_values() -> void:
 	var music_players := get_tree().get_nodes_in_group("background_music")
@@ -160,13 +154,11 @@ func _load_initial_values() -> void:
 func _on_music_changed(value: float) -> void:
 	_music_label.text = "%d%%" % int(value)
 	var vol_db := linear_to_db(value / 100.0) if value > 0 else -80.0
-	var music_players := get_tree().get_nodes_in_group("background_music")
-	for player in music_players:
+	for player in get_tree().get_nodes_in_group("background_music"):
 		(player as AudioStreamPlayer).volume_db = vol_db
 
 func _on_sensitivity_changed(value: float) -> void:
 	_sensitivity_label.text = "%.1f" % value
-	var cameras := get_tree().get_nodes_in_group("player_camera")
-	for cam in cameras:
+	for cam in get_tree().get_nodes_in_group("player_camera"):
 		if cam.has_method("set_sensitivity_scale"):
 			cam.set_sensitivity_scale(value)
