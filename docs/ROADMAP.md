@@ -11,7 +11,7 @@
 - [x] Player character with WASD movement
 - [x] Camera follow system
 - [x] Small test map (grass, trees, house, farm area)
-- [ ] Interaction system (Press E)
+- [x] Interaction system (Press E)
 - [ ] Inventory system with item resources
 - [ ] Farming plot (plant, grow, harvest)
 - [ ] Cooking station (combine ingredients → food)

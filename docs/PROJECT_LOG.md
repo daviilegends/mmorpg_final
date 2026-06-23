@@ -16,7 +16,7 @@
 - Nothing yet — no gameplay implemented
 
 ### Next Recommended Step
-- Add interaction system (Press E on objects)
+- Add player movement and camera follow
 
 ---
 
@@ -40,4 +40,27 @@
 - Nothing — basic movement and map are functional
 
 ### Next Recommended Step
-- Add interaction system (Press E on objects)
+- Add inventory system with item resources
+
+---
+
+## 2026-06-22 (Update 3)
+
+### What Changed
+- Added Interactable base class (Area3D) with display name, prompt, and signal
+- Added InteractionManager on the player with spherical detection area (radius 2.5)
+- Added InteractionHUD with prompt label at bottom of screen
+- Created interactable scripts for: Door, Chest, Cooking Station, Farm Plot
+- Updated test map with interactable objects (collision shapes on layer 2)
+
+### What Works
+- Player walks near objects and sees "Press E to..." prompt
+- Pressing E triggers the interaction (prints to console)
+- Prompt disappears when walking away
+- Nearest object is always selected
+
+### What Is Broken
+- Interactions only print to console (no real gameplay yet)
+
+### Next Recommended Step
+- Add inventory system with item resources
