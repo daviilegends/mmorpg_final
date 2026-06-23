@@ -75,9 +75,19 @@ func _load_animations_from(glb_path: String) -> void:
 			continue
 		var anim := source_lib.get_animation(anim_name).duplicate()
 		_remap_paths(anim, source_skel_path)
+		_set_loop_mode(anim, anim_name)
 		target_lib.add_animation(anim_name, anim)
 
 	instance.queue_free()
+
+const LOOPING_ANIMS: Array[String] = [
+	"Idle_A", "Idle_B", "Walking_A", "Walking_B", "Walking_C",
+	"Running_A", "Running_B", "Jump_Idle",
+]
+
+func _set_loop_mode(anim: Animation, anim_name: String) -> void:
+	if anim_name in LOOPING_ANIMS:
+		anim.loop_mode = Animation.LOOP_LINEAR
 
 func _remap_paths(anim: Animation, source_skel_path: String) -> void:
 	for i in range(anim.get_track_count()):
