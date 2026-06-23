@@ -6,6 +6,7 @@ var _nearby: Array[Interactable] = []
 var nearest: Interactable = null
 
 @onready var area: Area3D = $InteractionArea
+@onready var camera: Camera3D = get_parent().get_node("Camera3D")
 
 func _ready() -> void:
 	add_to_group("interaction_manager")
@@ -15,9 +16,32 @@ func _ready() -> void:
 func _process(_delta: float) -> void:
 	_update_nearest()
 
-func _input(event: InputEvent) -> void:
-	if event.is_action_pressed("interact") and nearest:
-		nearest.interact()
+func _unhandled_input(event: InputEvent) -> void:
+	if event is InputEventMouseButton:
+		var mb := event as InputEventMouseButton
+		if mb.button_index == MOUSE_BUTTON_RIGHT and not mb.pressed:
+			if camera.has_method("was_drag") and camera.was_drag():
+				return
+			_try_interact_at(mb.position)
+
+func _try_interact_at(screen_pos: Vector2) -> void:
+	if not camera:
+		return
+
+	var from := camera.project_ray_origin(screen_pos)
+	var dir := camera.project_ray_normal(screen_pos)
+	var to := from + dir * 100.0
+
+	var space := get_world_3d().direct_space_state
+	var query := PhysicsRayQueryParameters3D.create(from, to, 2)
+	var result := space.intersect_ray(query)
+
+	if result.is_empty():
+		return
+
+	var collider := result.get("collider")
+	if collider is Interactable and collider in _nearby:
+		collider.interact()
 
 func _on_area_entered(area_node: Area3D) -> void:
 	if area_node is Interactable:

@@ -29,10 +29,8 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.7, 0)
 mesh = SubResource("CapsuleMesh_001")
 
 [node name="Camera3D" type="Camera3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 0.78, 0.63, 0, -0.63, 0.78, 0, 10, 8)
 script = ExtResource("2")
 target = NodePath("..")
-offset = Vector3(0, 10, 8)
 
 [node name="InteractionManager" type="Node3D" parent="."]
 script = ExtResource("3")

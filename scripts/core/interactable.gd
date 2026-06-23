@@ -7,7 +7,7 @@ extends Area3D
 signal interacted
 
 func get_prompt_text() -> String:
-	return "Press E to %s %s" % [interaction_prompt, display_name]
+	return "Right-click to %s %s" % [interaction_prompt, display_name]
 
 func interact() -> void:
 	interacted.emit()
