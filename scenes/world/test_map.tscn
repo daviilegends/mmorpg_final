@@ -14,6 +14,7 @@
 [ext_resource type="Script" path="res://scripts/player/sprite_player.gd" id="12"]
 [ext_resource type="Script" path="res://scripts/ui/inventory_ui.gd" id="13"]
 [ext_resource type="Script" path="res://scripts/world/starter_items.gd" id="14"]
+[ext_resource type="Script" path="res://scripts/world/terrain_generator.gd" id="15"]
 
 [sub_resource type="ProceduralSkyMaterial" id="SkyMaterial_001"]
 sky_top_color = Color(0.35, 0.6, 0.92, 1)
@@ -65,15 +66,8 @@ shadow_enabled = true
 [node name="WorldEnvironment" type="WorldEnvironment" parent="."]
 environment = SubResource("Environment_001")
 
-[node name="Ground" type="StaticBody3D" parent="." unique_id=1402147372]
-
-[node name="GroundMesh" type="MeshInstance3D" parent="Ground" unique_id=1759890781]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.017435074, -9.536743e-07, 0.009524345)
-mesh = SubResource("PlaneMesh_001")
-surface_material_override/0 = SubResource("Material_ground")
-
-[node name="GroundCollision" type="CollisionShape3D" parent="Ground" unique_id=1325033692]
-shape = SubResource("WorldBoundaryShape3D_001")
+[node name="TerrainGenerator" type="Node" parent="."]
+script = ExtResource("15")
 
 [node name="Village" type="Node3D" parent="." unique_id=282913844]
 script = ExtResource("7")
