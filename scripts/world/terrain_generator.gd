@@ -143,30 +143,36 @@ func _spawn_vegetation() -> void:
 	veg_node.name = "Vegetation"
 	get_parent().add_child(veg_node)
 
-	# Dense forest outside village
-	_scatter(rng, veg_node, nature_path, trees, 400, 25, 450, 0.7, 1.6, true)
-	# Some trees closer to village
-	_scatter(rng, veg_node, nature_path, trees, 60, 15, 30, 0.5, 1.0, true)
-	# Dead trees scattered in mountains
-	_scatter(rng, veg_node, nature_path, dead_trees, 40, 80, 400, 0.6, 1.2, false)
-	# Bushes everywhere
-	_scatter(rng, veg_node, nature_path, bushes, 300, 10, 400, 0.6, 1.4, true)
-	# Flowers around village
-	_scatter(rng, veg_node, nature_path, flowers, 150, 8, 200, 0.7, 1.5, false)
-	# Grass patches
-	_scatter(rng, veg_node, nature_path, grass, 250, 5, 350, 0.5, 1.3, false)
+	# Trees in forest ring (outside village, not inside)
+	_scatter(rng, veg_node, nature_path, trees, 120, 35, 200, 0.7, 1.5, true)
+	# Dead trees far away
+	_scatter(rng, veg_node, nature_path, dead_trees, 15, 100, 250, 0.6, 1.0, false)
+	# Bushes outside village
+	_scatter(rng, veg_node, nature_path, bushes, 60, 25, 150, 0.6, 1.3, false)
+	# Flowers near village edge
+	_scatter(rng, veg_node, nature_path, flowers, 40, 20, 80, 0.7, 1.3, false)
+	# Grass outside village
+	_scatter(rng, veg_node, nature_path, grass, 50, 18, 120, 0.5, 1.0, false)
+
+const VILLAGE_CLEAR_RADIUS := 22.0
 
 func _scatter(rng: RandomNumberGenerator, parent: Node3D, base_path: String,
 		models: Array[String], count: int, min_dist: float, max_dist: float,
 		scale_min: float, scale_max: float, with_collision: bool) -> void:
-	for i in range(count):
+	var spawned := 0
+	var attempts := 0
+	while spawned < count and attempts < count * 3:
+		attempts += 1
 		var angle := rng.randf() * TAU
 		var dist := rng.randf_range(min_dist, max_dist)
 		var x := cos(angle) * dist
 		var z := sin(angle) * dist
 
+		if Vector2(x, z).length() < VILLAGE_CLEAR_RADIUS:
+			continue
+
 		var h: float = terrain.data.get_height(Vector3(x, 0, z))
-		if h < -50 or h > 100:
+		if is_nan(h) or h < -50 or h > 100:
 			continue
 
 		var model_name: String = models[rng.randi() % models.size()]
@@ -180,6 +186,7 @@ func _scatter(rng: RandomNumberGenerator, parent: Node3D, base_path: String,
 		inst.rotation.y = rng.randf() * TAU
 		var s := rng.randf_range(scale_min, scale_max)
 		inst.scale = Vector3(s, s, s)
+		spawned += 1
 
 		if with_collision:
 			_add_collision(inst)
