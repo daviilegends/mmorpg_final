@@ -20,4 +20,5 @@ func _ready() -> void:
 		if item:
 			inv.add_item(item, entry[1])
 
-	print("[Starter] Gave starter items to player")
+	inv.add_bag()
+	print("[Starter] Gave starter items + extra bag to player")
