@@ -4,19 +4,24 @@ const SLOT_SIZE := 52
 const SLOT_MARGIN := 3
 const COLS := 4
 const BAG_PADDING := 10
+const BAG_BTN_SIZE := 40
+const BAG_BTN_MARGIN := 4
+const TOTAL_BAG_SLOTS := 4
 const BG_COLOR := Color(0.12, 0.1, 0.15, 0.92)
 const SLOT_COLOR := Color(0.22, 0.2, 0.28, 0.9)
 const SLOT_HOVER := Color(0.4, 0.35, 0.5, 0.9)
 const SLOT_EMPTY := Color(0.15, 0.13, 0.18, 0.7)
+const LOCKED_COLOR := Color(0.08, 0.07, 0.1, 0.8)
 const TEXT_COLOR := Color(0.9, 0.88, 0.8)
 const ACCENT := Color(0.7, 0.6, 0.4)
+const LOCKED_ACCENT := Color(0.35, 0.3, 0.25)
 const FONT_PATH := "res://assets/fonts/MedievalSharp-Regular.ttf"
 const MARGIN_RIGHT := 10
-const MARGIN_BOTTOM := 50
+const MARGIN_BOTTOM := 10
 
-var _is_open := false
-var _bag_panel: Control
-var _bag_button: Button
+var _open_bags: Array[bool] = [false, false, false, false]
+var _bag_panels: Array[Control] = [null, null, null, null]
+var _bag_buttons: Array[Button] = []
 var _tooltip: Label
 var _inventory: InventoryManager
 var _font: Font
@@ -24,21 +29,12 @@ var _font: Font
 func _ready() -> void:
 	layer = 9
 	_font = load(FONT_PATH)
-	_build_bag_button()
-	_build_bag_panel()
+	_build_bag_bar()
 	_build_tooltip()
-	_bag_panel.visible = false
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("inventory"):
-		_toggle()
-
-func _toggle() -> void:
-	_is_open = not _is_open
-	_bag_panel.visible = _is_open
-	if _is_open:
-		_find_inventory()
-		_rebuild_slots()
+		_toggle_bag(0)
 
 func _find_inventory() -> void:
 	if _inventory:
@@ -46,103 +42,132 @@ func _find_inventory() -> void:
 	var nodes := get_tree().get_nodes_in_group("inventory")
 	if nodes.size() > 0:
 		_inventory = nodes[0] as InventoryManager
-		_inventory.inventory_changed.connect(_refresh)
+		_inventory.inventory_changed.connect(_refresh_all)
 
-# === BAG BUTTON (bottom-right, always visible) ===
-func _build_bag_button() -> void:
-	_bag_button = Button.new()
-	_bag_button.custom_minimum_size = Vector2(44, 44)
-	_bag_button.anchor_left = 1.0
-	_bag_button.anchor_top = 1.0
-	_bag_button.anchor_right = 1.0
-	_bag_button.anchor_bottom = 1.0
-	_bag_button.offset_left = -54
-	_bag_button.offset_top = -54
-	_bag_button.offset_right = -MARGIN_RIGHT
-	_bag_button.offset_bottom = -MARGIN_RIGHT
-	_bag_button.pressed.connect(_toggle)
-	_bag_button.tooltip_text = "Backpack (B)"
+# === BAG BAR (4 buttons at bottom-right) ===
+func _build_bag_bar() -> void:
+	var bar_w: float = TOTAL_BAG_SLOTS * (BAG_BTN_SIZE + BAG_BTN_MARGIN) + BAG_BTN_MARGIN
 
-	var style := StyleBoxFlat.new()
-	style.bg_color = BG_COLOR
-	style.set_corner_radius_all(6)
-	style.border_color = ACCENT
-	style.set_border_width_all(2)
-	_bag_button.add_theme_stylebox_override("normal", style)
+	for i in range(TOTAL_BAG_SLOTS):
+		var btn := Button.new()
+		btn.custom_minimum_size = Vector2(BAG_BTN_SIZE, BAG_BTN_SIZE)
+		btn.anchor_left = 1.0
+		btn.anchor_top = 1.0
+		btn.anchor_right = 1.0
+		btn.anchor_bottom = 1.0
 
-	var style_hover := style.duplicate()
-	style_hover.bg_color = Color(0.2, 0.18, 0.25, 0.95)
-	_bag_button.add_theme_stylebox_override("hover", style_hover)
+		var btn_x: float = -MARGIN_RIGHT - bar_w + i * (BAG_BTN_SIZE + BAG_BTN_MARGIN) + BAG_BTN_MARGIN
+		btn.offset_left = btn_x
+		btn.offset_right = btn_x + BAG_BTN_SIZE
+		btn.offset_top = -MARGIN_BOTTOM - BAG_BTN_SIZE
+		btn.offset_bottom = -MARGIN_BOTTOM
 
-	var style_pressed := style.duplicate()
-	style_pressed.bg_color = Color(0.25, 0.22, 0.3, 0.95)
-	_bag_button.add_theme_stylebox_override("pressed", style_pressed)
+		var is_default := (i == 0)
+		var border_color: Color = ACCENT if is_default else LOCKED_ACCENT
+		var bg: Color = BG_COLOR if is_default else LOCKED_COLOR
 
-	# Bag icon label (emoji-like)
-	_bag_button.text = "B"
-	if _font:
-		_bag_button.add_theme_font_override("font", _font)
-	_bag_button.add_theme_font_size_override("font_size", 22)
-	_bag_button.add_theme_color_override("font_color", ACCENT)
+		var style := StyleBoxFlat.new()
+		style.bg_color = bg
+		style.set_corner_radius_all(5)
+		style.border_color = border_color
+		style.set_border_width_all(2)
+		btn.add_theme_stylebox_override("normal", style)
 
-	add_child(_bag_button)
+		var style_hover := style.duplicate()
+		style_hover.bg_color = Color(bg.r + 0.08, bg.g + 0.08, bg.b + 0.1, bg.a)
+		btn.add_theme_stylebox_override("hover", style_hover)
 
-# === BAG PANEL (above the button) ===
-func _build_bag_panel() -> void:
+		var style_pressed := style.duplicate()
+		style_pressed.bg_color = Color(bg.r + 0.12, bg.g + 0.1, bg.b + 0.15, bg.a)
+		btn.add_theme_stylebox_override("pressed", style_pressed)
+
+		if is_default:
+			btn.text = "B"
+			btn.tooltip_text = "Backpack (B)"
+		else:
+			btn.text = ""
+			btn.tooltip_text = "Empty bag slot"
+			btn.disabled = true
+
+		if _font:
+			btn.add_theme_font_override("font", _font)
+		btn.add_theme_font_size_override("font_size", 18)
+		btn.add_theme_color_override("font_color", border_color)
+
+		var idx := i
+		btn.pressed.connect(func() -> void: _toggle_bag(idx))
+		add_child(btn)
+		_bag_buttons.append(btn)
+
+func _toggle_bag(bag_idx: int) -> void:
+	_find_inventory()
+	if not _inventory:
+		return
+	if bag_idx >= _inventory.get_bag_count():
+		return
+
+	_open_bags[bag_idx] = not _open_bags[bag_idx]
+
+	if _open_bags[bag_idx]:
+		if _bag_panels[bag_idx] == null:
+			_bag_panels[bag_idx] = _create_bag_panel(bag_idx)
+			add_child(_bag_panels[bag_idx])
+		_bag_panels[bag_idx].visible = true
+		_refresh_bag(bag_idx)
+	else:
+		if _bag_panels[bag_idx]:
+			_bag_panels[bag_idx].visible = false
+
+func _create_bag_panel(bag_idx: int) -> Control:
 	var rows: int = ceili(float(InventoryManager.SLOTS_PER_BAG) / COLS)
 	var grid_w: float = COLS * (SLOT_SIZE + SLOT_MARGIN) + SLOT_MARGIN
 	var grid_h: float = rows * (SLOT_SIZE + SLOT_MARGIN) + SLOT_MARGIN
 	var panel_w: float = grid_w + BAG_PADDING * 2
 	var panel_h: float = grid_h + BAG_PADDING + 34
 
-	_bag_panel = ColorRect.new()
-	(_bag_panel as ColorRect).color = BG_COLOR
-	_bag_panel.anchor_left = 1.0
-	_bag_panel.anchor_top = 1.0
-	_bag_panel.anchor_right = 1.0
-	_bag_panel.anchor_bottom = 1.0
-	_bag_panel.offset_right = -MARGIN_RIGHT
-	_bag_panel.offset_bottom = -60
-	_bag_panel.offset_left = -MARGIN_RIGHT - panel_w
-	_bag_panel.offset_top = -60 - panel_h
-	add_child(_bag_panel)
+	var panel := ColorRect.new()
+	panel.color = BG_COLOR
 
-	# Title
+	# Stack panels from right to left based on bag_idx
+	var panel_right: float = -MARGIN_RIGHT - bag_idx * (panel_w + 6)
+	var panel_bottom: float = -MARGIN_BOTTOM - BAG_BTN_SIZE - 6
+
+	panel.anchor_left = 1.0
+	panel.anchor_top = 1.0
+	panel.anchor_right = 1.0
+	panel.anchor_bottom = 1.0
+	panel.offset_right = panel_right
+	panel.offset_left = panel_right - panel_w
+	panel.offset_bottom = panel_bottom
+	panel.offset_top = panel_bottom - panel_h
+
+	var bag_name: String = "Backpack" if bag_idx == 0 else "Bag %d" % (bag_idx + 1)
 	var title := Label.new()
-	title.text = "Backpack"
+	title.text = bag_name
 	if _font:
 		title.add_theme_font_override("font", _font)
-	title.add_theme_font_size_override("font_size", 18)
+	title.add_theme_font_size_override("font_size", 16)
 	title.add_theme_color_override("font_color", ACCENT)
 	title.position = Vector2(BAG_PADDING, 6)
-	title.size = Vector2(panel_w - BAG_PADDING * 2, 24)
-	_bag_panel.add_child(title)
+	title.size = Vector2(panel_w - BAG_PADDING * 2 - 24, 22)
+	panel.add_child(title)
 
-	# Close X
 	var close_btn := Button.new()
 	close_btn.text = "X"
 	close_btn.flat = true
-	close_btn.add_theme_font_size_override("font_size", 14)
+	close_btn.add_theme_font_size_override("font_size", 13)
 	close_btn.add_theme_color_override("font_color", TEXT_COLOR)
-	close_btn.position = Vector2(panel_w - 28, 4)
-	close_btn.size = Vector2(24, 24)
-	close_btn.pressed.connect(_toggle)
-	_bag_panel.add_child(close_btn)
-
-func _rebuild_slots() -> void:
-	# Remove old slot nodes
-	for child in _bag_panel.get_children():
-		if child is Panel:
-			child.queue_free()
-
-	if not _inventory:
-		return
+	close_btn.position = Vector2(panel_w - 24, 4)
+	close_btn.size = Vector2(20, 20)
+	var idx := bag_idx
+	close_btn.pressed.connect(func() -> void: _toggle_bag(idx))
+	panel.add_child(close_btn)
 
 	for i in range(InventoryManager.SLOTS_PER_BAG):
 		var col: int = i % COLS
 		var row: int = i / COLS
 		var x: float = BAG_PADDING + col * (SLOT_SIZE + SLOT_MARGIN)
-		var y: float = 32 + row * (SLOT_SIZE + SLOT_MARGIN)
+		var y: float = 30 + row * (SLOT_SIZE + SLOT_MARGIN)
 
 		var slot := Panel.new()
 		var style := StyleBoxFlat.new()
@@ -154,10 +179,11 @@ func _rebuild_slots() -> void:
 		slot.position = Vector2(x, y)
 		slot.size = Vector2(SLOT_SIZE, SLOT_SIZE)
 		slot.mouse_filter = Control.MOUSE_FILTER_STOP
+		slot.set_meta("bag_idx", bag_idx)
 		slot.set_meta("slot_idx", i)
 		slot.mouse_entered.connect(_on_slot_hover.bind(slot, true))
 		slot.mouse_exited.connect(_on_slot_hover.bind(slot, false))
-		_bag_panel.add_child(slot)
+		panel.add_child(slot)
 
 		var icon := TextureRect.new()
 		icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
@@ -182,8 +208,27 @@ func _rebuild_slots() -> void:
 		qty.name = "Qty"
 		slot.add_child(qty)
 
-	await get_tree().process_frame
-	_refresh()
+	return panel
+
+func unlock_bag_slot(bag_idx: int) -> void:
+	if bag_idx <= 0 or bag_idx >= TOTAL_BAG_SLOTS:
+		return
+	_find_inventory()
+	if _inventory:
+		_inventory.add_bag()
+	var btn := _bag_buttons[bag_idx]
+	btn.disabled = false
+	btn.text = "B"
+	btn.add_theme_color_override("font_color", ACCENT)
+	var style := StyleBoxFlat.new()
+	style.bg_color = BG_COLOR
+	style.set_corner_radius_all(5)
+	style.border_color = ACCENT
+	style.set_border_width_all(2)
+	btn.add_theme_stylebox_override("normal", style)
+	var style_hover := style.duplicate()
+	style_hover.bg_color = Color(0.2, 0.18, 0.25, 0.95)
+	btn.add_theme_stylebox_override("hover", style_hover)
 
 func _build_tooltip() -> void:
 	_tooltip = Label.new()
@@ -195,20 +240,25 @@ func _build_tooltip() -> void:
 	_tooltip.anchor_bottom = 1.0
 	_tooltip.grow_horizontal = Control.GROW_DIRECTION_BEGIN
 	_tooltip.offset_right = -MARGIN_RIGHT
-	_tooltip.offset_bottom = -58
-	_tooltip.offset_left = -350
-	_tooltip.offset_top = -74
+	_tooltip.offset_bottom = -MARGIN_BOTTOM - BAG_BTN_SIZE - 4
+	_tooltip.offset_left = -400
+	_tooltip.offset_top = -MARGIN_BOTTOM - BAG_BTN_SIZE - 20
 	_tooltip.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	add_child(_tooltip)
 
-func _refresh() -> void:
-	if not _inventory:
+func _refresh_all() -> void:
+	for i in range(TOTAL_BAG_SLOTS):
+		if _open_bags[i] and _bag_panels[i]:
+			_refresh_bag(i)
+
+func _refresh_bag(bag_idx: int) -> void:
+	if not _inventory or not _bag_panels[bag_idx]:
 		return
-	for child in _bag_panel.get_children():
+	for child in _bag_panels[bag_idx].get_children():
 		if not (child is Panel) or not child.has_meta("slot_idx"):
 			continue
 		var slot_idx: int = child.get_meta("slot_idx")
-		var data := _inventory.get_slot(0, slot_idx)
+		var data := _inventory.get_slot(bag_idx, slot_idx)
 		var icon_node: TextureRect = child.get_node("Icon")
 		var qty_node: Label = child.get_node("Qty")
 		if data.is_empty():
@@ -228,9 +278,12 @@ func _update_slot_style(slot: Panel, color: Color) -> void:
 
 func _on_slot_hover(slot: Panel, hovering: bool) -> void:
 	if not _inventory:
+		_find_inventory()
+	if not _inventory:
 		return
+	var bag_idx: int = slot.get_meta("bag_idx")
 	var slot_idx: int = slot.get_meta("slot_idx")
-	var data := _inventory.get_slot(0, slot_idx)
+	var data := _inventory.get_slot(bag_idx, slot_idx)
 
 	if hovering and not data.is_empty():
 		_update_slot_style(slot, SLOT_HOVER)
