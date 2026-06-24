@@ -3,38 +3,70 @@ extends Node
 
 signal inventory_changed
 signal item_added(item: ItemResource, amount: int)
-signal bag_added(bag_index: int)
+signal bag_equipped(bag_idx: int, bag: BagResource)
 
-const SLOTS_PER_BAG := 8
-const MAX_BAGS := 5
+const MAX_BAGS := 4
+const DEFAULT_SLOTS := 8
 
+var bag_data: Array[BagResource] = []
 var bags: Array[Array] = []
 
 func _ready() -> void:
 	add_to_group("inventory")
-	add_bag()
+	var default_bag := BagResource.new()
+	default_bag.id = "bag_brown_8"
+	default_bag.display_name = "Backpack (8 slots)"
+	default_bag.slot_count = DEFAULT_SLOTS
+	default_bag.color = "brown"
+	default_bag.icon = load("res://assets/icons/bags/bag_brown_8.png")
+	_add_bag(default_bag)
 
-func add_bag() -> bool:
-	if bags.size() >= MAX_BAGS:
+func _add_bag(bag: BagResource) -> void:
+	bag_data.append(bag)
+	var slots: Array[Dictionary] = []
+	for i in range(bag.slot_count):
+		slots.append({})
+	bags.append(slots)
+
+func equip_bag(slot_idx: int, bag: BagResource) -> bool:
+	if slot_idx <= 0 or slot_idx >= MAX_BAGS:
 		return false
-	var bag: Array[Dictionary] = []
-	for i in range(SLOTS_PER_BAG):
-		bag.append({})
-	bags.append(bag)
-	bag_added.emit(bags.size() - 1)
+	if slot_idx < bag_data.size():
+		return false
+	while bag_data.size() <= slot_idx:
+		_add_bag_placeholder()
+	bag_data[slot_idx] = bag
+	bags[slot_idx] = []
+	for i in range(bag.slot_count):
+		bags[slot_idx].append({})
+	bag_equipped.emit(slot_idx, bag)
 	inventory_changed.emit()
 	return true
 
-func get_bag_count() -> int:
-	return bags.size()
+func _add_bag_placeholder() -> void:
+	var empty := BagResource.new()
+	empty.id = ""
+	empty.slot_count = 0
+	bag_data.append(empty)
+	bags.append([])
 
-func get_total_slots() -> int:
-	return bags.size() * SLOTS_PER_BAG
+func get_bag_count() -> int:
+	return bag_data.size()
+
+func get_bag(bag_idx: int) -> BagResource:
+	if bag_idx < 0 or bag_idx >= bag_data.size():
+		return null
+	return bag_data[bag_idx]
+
+func get_bag_slot_count(bag_idx: int) -> int:
+	if bag_idx < 0 or bag_idx >= bags.size():
+		return 0
+	return bags[bag_idx].size()
 
 func get_slot(bag_idx: int, slot_idx: int) -> Dictionary:
 	if bag_idx < 0 or bag_idx >= bags.size():
 		return {}
-	if slot_idx < 0 or slot_idx >= SLOTS_PER_BAG:
+	if slot_idx < 0 or slot_idx >= bags[bag_idx].size():
 		return {}
 	return bags[bag_idx][slot_idx]
 
@@ -42,7 +74,7 @@ func add_item(item: ItemResource, amount: int = 1) -> int:
 	var remaining := amount
 
 	for bag in bags:
-		for i in range(SLOTS_PER_BAG):
+		for i in range(bag.size()):
 			if remaining <= 0:
 				break
 			if bag[i].is_empty():
@@ -57,7 +89,7 @@ func add_item(item: ItemResource, amount: int = 1) -> int:
 			remaining -= to_add
 
 	for bag in bags:
-		for i in range(SLOTS_PER_BAG):
+		for i in range(bag.size()):
 			if remaining <= 0:
 				break
 			if not bag[i].is_empty():
@@ -76,7 +108,7 @@ func remove_item(item_id: String, amount: int = 1) -> int:
 	var remaining := amount
 
 	for bag_idx in range(bags.size() - 1, -1, -1):
-		for i in range(SLOTS_PER_BAG - 1, -1, -1):
+		for i in range(bags[bag_idx].size() - 1, -1, -1):
 			if remaining <= 0:
 				break
 			if bags[bag_idx][i].is_empty():
