@@ -126,9 +126,6 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.2, 0)
 text = "Farm Plot"
 font_size = 24
 
-[node name="ForestRing" type="Node3D" parent="."]
-script = ExtResource("9")
-
 [node name="BackgroundMusic" type="AudioStreamPlayer" parent="."]
 script = ExtResource("10")
 
