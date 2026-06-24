@@ -7,19 +7,17 @@ func _ready() -> void:
 	_create_safety_floor()
 	_freeze_player(true)
 	terrain = await _create_terrain()
+	await get_tree().create_timer(0.5).timeout
 	_spawn_vegetation()
-	await get_tree().create_timer(0.3).timeout
 	_position_player()
 	_freeze_player(false)
 	_remove_safety_floor()
-	print("[Terrain] Generated terrain with vegetation")
+	print("[Terrain] Done")
 
 func _create_safety_floor() -> void:
 	_safety_floor = StaticBody3D.new()
-	_safety_floor.name = "SafetyFloor"
 	var col := CollisionShape3D.new()
-	var shape := WorldBoundaryShape3D.new()
-	col.shape = shape
+	col.shape = WorldBoundaryShape3D.new()
 	_safety_floor.add_child(col)
 	_safety_floor.position.y = -1.0
 	get_parent().add_child(_safety_floor)
@@ -27,36 +25,33 @@ func _create_safety_floor() -> void:
 func _remove_safety_floor() -> void:
 	if _safety_floor:
 		_safety_floor.queue_free()
-		_safety_floor = null
 
 func _freeze_player(freeze: bool) -> void:
 	var player := get_parent().find_child("Player", false)
-	if player and player is CharacterBody3D:
-		if freeze:
-			player.global_position = Vector3(0, 5, 0)
-			player.set_physics_process(false)
-		else:
-			player.set_physics_process(true)
+	if not player or not player is CharacterBody3D:
+		return
+	if freeze:
+		player.global_position = Vector3(0, 3, 0)
+		player.set_physics_process(false)
+	else:
+		player.set_physics_process(true)
 
 func _position_player() -> void:
 	var player := get_parent().find_child("Player", false)
 	if player:
-		var h: float = terrain.data.get_height(Vector3.ZERO)
-		if is_nan(h) or h < -100:
-			h = 0.0
-		player.global_position = Vector3(0, h + 3, 0)
+		player.global_position = Vector3(0, 2, 0)
 
 func _create_terrain() -> Terrain3D:
 	var grass_gradient := Gradient.new()
 	grass_gradient.set_color(0, Color.from_hsv(100.0 / 360.0, 0.45, 0.35))
 	grass_gradient.set_color(1, Color.from_hsv(125.0 / 360.0, 0.5, 0.4))
-	var grass_ta: Terrain3DTextureAsset = await _create_texture("Grass", grass_gradient, 1024)
+	var grass_ta: Terrain3DTextureAsset = await _create_texture("Grass", grass_gradient, 512)
 	grass_ta.uv_scale = 0.08
 
 	var dirt_gradient := Gradient.new()
 	dirt_gradient.set_color(0, Color.from_hsv(30.0 / 360.0, 0.4, 0.25))
 	dirt_gradient.set_color(1, Color.from_hsv(25.0 / 360.0, 0.45, 0.35))
-	var dirt_ta: Terrain3DTextureAsset = await _create_texture("Dirt", dirt_gradient, 1024)
+	var dirt_ta: Terrain3DTextureAsset = await _create_texture("Dirt", dirt_gradient, 512)
 	dirt_ta.uv_scale = 0.05
 
 	terrain = Terrain3D.new()
@@ -72,55 +67,51 @@ func _create_terrain() -> Terrain3D:
 	terrain.assets.set_texture(0, grass_ta)
 	terrain.assets.set_texture(1, dirt_ta)
 
-	var size := 1024
+	# Generate heightmap
+	var size := 512
 	var noise := FastNoiseLite.new()
 	noise.noise_type = FastNoiseLite.TYPE_SIMPLEX_SMOOTH
-	noise.frequency = 0.0008
-	noise.fractal_octaves = 5
-
-	# Second noise for mountain ridges
-	var ridge_noise := FastNoiseLite.new()
-	ridge_noise.noise_type = FastNoiseLite.TYPE_SIMPLEX_SMOOTH
-	ridge_noise.frequency = 0.002
-	ridge_noise.fractal_octaves = 3
+	noise.frequency = 0.003
+	noise.fractal_octaves = 4
 
 	var img: Image = Image.create_empty(size, size, false, Image.FORMAT_RF)
 	var center := Vector2(size / 2.0, size / 2.0)
-	var flat_radius := 60.0
-	var blend_radius := 80.0
+
+	# Village area = ~20m radius = ~40 pixels at this scale
+	# Each pixel = ~0.5m (size 512 maps to 256m world)
+	var village_radius_px := 45.0
+	var blend_radius_px := 40.0
 
 	for x in range(size):
 		for y in range(size):
-			var h: float = noise.get_noise_2d(x, y)
-			var ridge: float = absf(ridge_noise.get_noise_2d(x, y))
-			ridge = ridge * ridge * 1.5
+			var raw_noise: float = noise.get_noise_2d(x, y)
+			# Shift noise to be mostly positive (gentle hills)
+			var h: float = (raw_noise + 1.0) * 0.5
 
 			var dist: float = Vector2(x, y).distance_to(center)
 
-			if dist < flat_radius:
+			if dist < village_radius_px:
+				# Flat village area at height 0
 				h = 0.0
-			elif dist < flat_radius + blend_radius:
-				var t: float = (dist - flat_radius) / blend_radius
-				t = t * t * t
-				h = lerpf(0.0, h + ridge, t)
-			else:
-				h = h + ridge
-				var edge_factor: float = clampf((dist - 300) / 200.0, 0, 1)
-				h += edge_factor * 0.5
+			elif dist < village_radius_px + blend_radius_px:
+				# Smooth ramp from village to terrain
+				var t: float = (dist - village_radius_px) / blend_radius_px
+				t = t * t
+				h = lerpf(0.0, h, t)
 
 			img.set_pixel(x, y, Color(h, 0.0, 0.0, 1.0))
 
-	terrain.region_size = 1024
-	terrain.data.import_images([img, null, null], Vector3(-size / 2.0, 0, -size / 2.0), 0.0, 120.0)
+	terrain.region_size = 512
+	# Map to world: 512px centered, height 0 to 30m
+	terrain.data.import_images([img, null, null], Vector3(-256, 0, -256), 0.0, 30.0)
 
 	terrain.collision.mode = Terrain3DCollision.DYNAMIC_GAME
-
 	return terrain
 
 func _spawn_vegetation() -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 777
-	var nature_path := "res://assets/models/Ultimate Stylized Nature - May 2022/glTF/"
+	var np := "res://assets/models/Ultimate Stylized Nature - May 2022/glTF/"
 
 	var trees: Array[String] = [
 		"BirchTree_1", "BirchTree_2", "BirchTree_3", "BirchTree_4", "BirchTree_5",
@@ -137,42 +128,37 @@ func _spawn_vegetation() -> void:
 		"Flower_1_Clump", "Flower_2_Clump", "Flower_3_Clump",
 		"Flower_4_Clump", "Flower_5_Clump",
 	]
-	var grass: Array[String] = ["Grass_Large", "Grass_Small"]
+	var grass_models: Array[String] = ["Grass_Large", "Grass_Small"]
 
-	var veg_node := Node3D.new()
-	veg_node.name = "Vegetation"
-	get_parent().add_child(veg_node)
+	var veg := Node3D.new()
+	veg.name = "Vegetation"
+	get_parent().add_child(veg)
 
-	# Trees in forest ring (outside village, not inside)
-	_scatter(rng, veg_node, nature_path, trees, 120, 35, 200, 0.7, 1.5, true)
-	# Dead trees far away
-	_scatter(rng, veg_node, nature_path, dead_trees, 15, 100, 250, 0.6, 1.0, false)
-	# Bushes outside village
-	_scatter(rng, veg_node, nature_path, bushes, 60, 25, 150, 0.6, 1.3, false)
-	# Flowers near village edge
-	_scatter(rng, veg_node, nature_path, flowers, 40, 20, 80, 0.7, 1.3, false)
-	# Grass outside village
-	_scatter(rng, veg_node, nature_path, grass, 50, 18, 120, 0.5, 1.0, false)
+	_scatter(rng, veg, np, trees, 100, 30, 120, 0.7, 1.4, true)
+	_scatter(rng, veg, np, dead_trees, 10, 80, 120, 0.5, 0.9, false)
+	_scatter(rng, veg, np, bushes, 50, 22, 100, 0.6, 1.2, false)
+	_scatter(rng, veg, np, flowers, 30, 18, 60, 0.7, 1.3, false)
+	_scatter(rng, veg, np, grass_models, 40, 15, 80, 0.5, 1.0, false)
 
-const VILLAGE_CLEAR_RADIUS := 22.0
+const VILLAGE_CLEAR := 20.0
 
 func _scatter(rng: RandomNumberGenerator, parent: Node3D, base_path: String,
 		models: Array[String], count: int, min_dist: float, max_dist: float,
 		scale_min: float, scale_max: float, with_collision: bool) -> void:
 	var spawned := 0
 	var attempts := 0
-	while spawned < count and attempts < count * 3:
+	while spawned < count and attempts < count * 4:
 		attempts += 1
 		var angle := rng.randf() * TAU
 		var dist := rng.randf_range(min_dist, max_dist)
 		var x := cos(angle) * dist
 		var z := sin(angle) * dist
 
-		if Vector2(x, z).length() < VILLAGE_CLEAR_RADIUS:
+		if Vector2(x, z).length() < VILLAGE_CLEAR:
 			continue
 
 		var h: float = terrain.data.get_height(Vector3(x, 0, z))
-		if is_nan(h) or h < -50 or h > 100:
+		if is_nan(h) or h < -10:
 			continue
 
 		var model_name: String = models[rng.randi() % models.size()]
@@ -210,7 +196,6 @@ func _create_texture(tex_name: String, gradient: Gradient, tex_size: int) -> Ter
 	alb_noise.color_ramp = gradient
 	await alb_noise.changed
 	var alb_img: Image = alb_noise.get_image()
-
 	for x in range(alb_img.get_width()):
 		for y in range(alb_img.get_height()):
 			var clr: Color = alb_img.get_pixel(x, y)
