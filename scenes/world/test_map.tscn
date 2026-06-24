@@ -12,6 +12,8 @@
 [ext_resource type="Script" path="res://scripts/world/background_music.gd" id="10"]
 [ext_resource type="Script" path="res://scripts/ui/pause_menu.gd" id="11"]
 [ext_resource type="Script" path="res://scripts/player/sprite_player.gd" id="12"]
+[ext_resource type="Script" path="res://scripts/ui/inventory_ui.gd" id="13"]
+[ext_resource type="Script" path="res://scripts/world/starter_items.gd" id="14"]
 
 [sub_resource type="ProceduralSkyMaterial" id="SkyMaterial_001"]
 sky_top_color = Color(0.35, 0.6, 0.92, 1)
@@ -139,6 +141,12 @@ script = ExtResource("10")
 [node name="PauseMenu" type="CanvasLayer" parent="."]
 process_mode = 3
 script = ExtResource("11")
+
+[node name="InventoryUI" type="CanvasLayer" parent="."]
+script = ExtResource("13")
+
+[node name="StarterItems" type="Node" parent="."]
+script = ExtResource("14")
 
 [node name="InteractionHUD" parent="." unique_id=1144441664 instance=ExtResource("2")]
 

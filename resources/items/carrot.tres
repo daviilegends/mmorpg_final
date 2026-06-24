@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="ItemResource" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/inventory/item_resource.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "carrot"
+display_name = "Carrot"
+description = "A fresh carrot, can be cooked"
+item_type = 2
+max_stack = 50
