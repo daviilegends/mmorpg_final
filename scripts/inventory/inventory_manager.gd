@@ -43,6 +43,26 @@ func equip_bag(slot_idx: int, bag: BagResource) -> bool:
 	inventory_changed.emit()
 	return true
 
+func swap_bags(from_idx: int, to_idx: int) -> void:
+	if from_idx == to_idx:
+		return
+	# Ensure both indices have entries
+	var max_idx: int = maxi(from_idx, to_idx)
+	while bag_data.size() <= max_idx:
+		_add_bag_placeholder()
+	while bags.size() <= max_idx:
+		bags.append([])
+
+	var temp_data := bag_data[from_idx]
+	bag_data[from_idx] = bag_data[to_idx]
+	bag_data[to_idx] = temp_data
+
+	var temp_slots := bags[from_idx]
+	bags[from_idx] = bags[to_idx]
+	bags[to_idx] = temp_slots
+
+	inventory_changed.emit()
+
 func _add_bag_placeholder() -> void:
 	var empty := BagResource.new()
 	empty.id = ""

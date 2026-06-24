@@ -4,14 +4,15 @@ const SLOT_SIZE := 48
 const SLOT_MARGIN := 3
 const COLS := 4
 const BAG_PADDING := 8
-const BAG_BTN_SIZE := 40
-const BAG_BTN_MARGIN := 4
+const BAG_BTN_SIZE := 54
+const BAG_BTN_MARGIN := 5
 const TOTAL_BAG_SLOTS := 4
 const BG_COLOR := Color(0.12, 0.1, 0.15, 0.92)
 const SLOT_COLOR := Color(0.22, 0.2, 0.28, 0.9)
 const SLOT_HOVER := Color(0.4, 0.35, 0.5, 0.9)
 const SLOT_EMPTY := Color(0.15, 0.13, 0.18, 0.7)
 const LOCKED_COLOR := Color(0.08, 0.07, 0.1, 0.8)
+const DROP_TARGET := Color(0.5, 0.45, 0.2, 0.9)
 const TEXT_COLOR := Color(0.9, 0.88, 0.8)
 const ACCENT := Color(0.7, 0.6, 0.4)
 const LOCKED_ACCENT := Color(0.35, 0.3, 0.25)
@@ -27,6 +28,11 @@ var _tooltip: Label
 var _inventory: InventoryManager
 var _font: Font
 
+# Drag state for bag reordering
+var _dragging_bag: int = -1
+var _drag_icon: TextureRect = null
+var _drag_offset: Vector2 = Vector2.ZERO
+
 func _ready() -> void:
 	layer = 9
 	_font = load(FONT_PATH)
@@ -36,6 +42,16 @@ func _ready() -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("inventory"):
 		_toggle_bag(0)
+
+func _input(event: InputEvent) -> void:
+	if _dragging_bag < 0:
+		return
+	if event is InputEventMouseMotion and _drag_icon:
+		_drag_icon.global_position = event.position - _drag_offset
+	if event is InputEventMouseButton:
+		var mb := event as InputEventMouseButton
+		if mb.button_index == MOUSE_BUTTON_LEFT and not mb.pressed:
+			_finish_drag(mb.position)
 
 func _find_inventory() -> void:
 	if _inventory:
@@ -47,6 +63,7 @@ func _find_inventory() -> void:
 		_inventory.bag_equipped.connect(_on_bag_equipped)
 		_update_bag_bar()
 
+# === BAG BAR ===
 func _build_bag_bar() -> void:
 	for i in range(TOTAL_BAG_SLOTS):
 		var btn := Button.new()
@@ -67,25 +84,105 @@ func _build_bag_bar() -> void:
 
 		var idx := i
 		btn.pressed.connect(func() -> void: _toggle_bag(idx))
+		btn.gui_input.connect(func(ev: InputEvent) -> void: _on_bag_btn_input(ev, idx))
 		add_child(btn)
 		_bag_buttons.append(btn)
 
-		# Icon inside button
 		var icon_rect := TextureRect.new()
 		icon_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		icon_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		icon_rect.set_anchors_preset(Control.PRESET_FULL_RECT)
-		icon_rect.offset_left = 4
-		icon_rect.offset_top = 4
-		icon_rect.offset_right = -4
-		icon_rect.offset_bottom = -4
+		icon_rect.offset_left = 3
+		icon_rect.offset_top = 3
+		icon_rect.offset_right = -3
+		icon_rect.offset_bottom = -3
 		icon_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		btn.add_child(icon_rect)
 		_bag_icons.append(icon_rect)
 
-	# Load default bag icon after a frame
 	await get_tree().process_frame
 	_find_inventory()
+
+func _on_bag_btn_input(event: InputEvent, bag_idx: int) -> void:
+	if event is InputEventMouseButton:
+		var mb := event as InputEventMouseButton
+		if mb.button_index == MOUSE_BUTTON_LEFT and mb.pressed:
+			if not _inventory:
+				return
+			var bag := _inventory.get_bag(bag_idx)
+			if not bag or bag.id == "":
+				return
+			_start_drag(bag_idx, mb.global_position)
+
+func _start_drag(bag_idx: int, mouse_pos: Vector2) -> void:
+	_dragging_bag = bag_idx
+	var bag := _inventory.get_bag(bag_idx)
+
+	_drag_icon = TextureRect.new()
+	_drag_icon.texture = bag.icon
+	_drag_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_drag_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	_drag_icon.size = Vector2(BAG_BTN_SIZE, BAG_BTN_SIZE)
+	_drag_icon.modulate = Color(1, 1, 1, 0.8)
+	_drag_icon.z_index = 100
+	_drag_offset = Vector2(BAG_BTN_SIZE / 2, BAG_BTN_SIZE / 2)
+	_drag_icon.global_position = mouse_pos - _drag_offset
+	add_child(_drag_icon)
+
+	_bag_icons[bag_idx].modulate = Color(1, 1, 1, 0.3)
+
+	for i in range(TOTAL_BAG_SLOTS):
+		if i != bag_idx:
+			_highlight_drop_target(i, true)
+
+func _finish_drag(mouse_pos: Vector2) -> void:
+	if _dragging_bag < 0:
+		return
+
+	var target_idx := _get_bag_slot_at(mouse_pos)
+
+	if target_idx >= 0 and target_idx != _dragging_bag:
+		_inventory.swap_bags(_dragging_bag, target_idx)
+		_close_all_bag_panels()
+		_update_bag_bar()
+
+	_bag_icons[_dragging_bag].modulate = Color(1, 1, 1, 1)
+	for i in range(TOTAL_BAG_SLOTS):
+		_highlight_drop_target(i, false)
+
+	if _drag_icon:
+		_drag_icon.queue_free()
+		_drag_icon = null
+	_dragging_bag = -1
+
+func _get_bag_slot_at(pos: Vector2) -> int:
+	for i in range(TOTAL_BAG_SLOTS):
+		var btn := _bag_buttons[i]
+		var rect := Rect2(btn.global_position, btn.size)
+		if rect.has_point(pos):
+			return i
+	return -1
+
+func _highlight_drop_target(idx: int, highlight: bool) -> void:
+	var btn := _bag_buttons[idx]
+	if highlight:
+		var style := StyleBoxFlat.new()
+		style.bg_color = DROP_TARGET
+		style.set_corner_radius_all(5)
+		style.border_color = Color(1, 0.9, 0.4)
+		style.set_border_width_all(2)
+		btn.add_theme_stylebox_override("normal", style)
+	else:
+		var bag := _inventory.get_bag(idx) if _inventory else null
+		var active := bag != null and bag.id != ""
+		_apply_bag_btn_style(btn, active)
+
+func _close_all_bag_panels() -> void:
+	for i in range(TOTAL_BAG_SLOTS):
+		_open_bags[i] = false
+		if _bag_panels[i]:
+			_bag_panels[i].queue_free()
+			_bag_panels[i] = null
 
 func _apply_bag_btn_style(btn: Button, active: bool) -> void:
 	var border_color: Color = ACCENT if active else LOCKED_ACCENT
@@ -118,15 +215,18 @@ func _update_bag_bar() -> void:
 		if bag and bag.id != "":
 			_apply_bag_btn_style(_bag_buttons[i], true)
 			_bag_icons[i].texture = bag.icon
+			_bag_icons[i].modulate = Color(1, 1, 1, 1)
 			_bag_buttons[i].tooltip_text = bag.display_name
 		else:
 			_apply_bag_btn_style(_bag_buttons[i], false)
 			_bag_icons[i].texture = null
 
-func _on_bag_equipped(bag_idx: int, bag: BagResource) -> void:
+func _on_bag_equipped(bag_idx: int, _bag: BagResource) -> void:
 	_update_bag_bar()
 
 func _toggle_bag(bag_idx: int) -> void:
+	if _dragging_bag >= 0:
+		return
 	_find_inventory()
 	if not _inventory:
 		return
@@ -172,7 +272,6 @@ func _create_bag_panel(bag_idx: int) -> Control:
 	panel.offset_bottom = panel_bottom
 	panel.offset_top = panel_bottom - panel_h
 
-	# Title with bag icon
 	var title_container := HBoxContainer.new()
 	title_container.position = Vector2(BAG_PADDING, 5)
 	title_container.size = Vector2(panel_w - BAG_PADDING * 2 - 24, 22)
