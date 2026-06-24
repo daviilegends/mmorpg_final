@@ -29,7 +29,7 @@ func _ready() -> void:
 	for anim_name in ANIMS:
 		for frame_name in ANIMS[anim_name]:
 			if frame_name not in _textures:
-				var path := SPRITE_DIR + frame_name + ".png"
+				var path: String = SPRITE_DIR + frame_name + ".png"
 				var tex: Texture2D = load(path)
 				if tex:
 					_textures[frame_name] = tex
