@@ -1,19 +1,50 @@
 extends Node
 
 var terrain: Terrain3D
+var _safety_floor: StaticBody3D
 
 func _ready() -> void:
+	_create_safety_floor()
+	_freeze_player(true)
 	terrain = await _create_terrain()
 	_spawn_vegetation()
+	await get_tree().create_timer(0.3).timeout
 	_position_player()
+	_freeze_player(false)
+	_remove_safety_floor()
 	print("[Terrain] Generated terrain with vegetation")
 
+func _create_safety_floor() -> void:
+	_safety_floor = StaticBody3D.new()
+	_safety_floor.name = "SafetyFloor"
+	var col := CollisionShape3D.new()
+	var shape := WorldBoundaryShape3D.new()
+	col.shape = shape
+	_safety_floor.add_child(col)
+	_safety_floor.position.y = -1.0
+	get_parent().add_child(_safety_floor)
+
+func _remove_safety_floor() -> void:
+	if _safety_floor:
+		_safety_floor.queue_free()
+		_safety_floor = null
+
+func _freeze_player(freeze: bool) -> void:
+	var player := get_parent().find_child("Player", false)
+	if player and player is CharacterBody3D:
+		if freeze:
+			player.global_position = Vector3(0, 5, 0)
+			player.set_physics_process(false)
+		else:
+			player.set_physics_process(true)
+
 func _position_player() -> void:
-	await get_tree().process_frame
 	var player := get_parent().find_child("Player", false)
 	if player:
 		var h: float = terrain.data.get_height(Vector3.ZERO)
-		player.global_position = Vector3(0, h + 2, 0)
+		if is_nan(h) or h < -100:
+			h = 0.0
+		player.global_position = Vector3(0, h + 3, 0)
 
 func _create_terrain() -> Terrain3D:
 	var grass_gradient := Gradient.new()
